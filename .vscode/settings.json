@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
-        "struct"
+        "struct",
+        "tupleannot"
     ],
     "python.testing.unittestArgs": [
         "-v",
