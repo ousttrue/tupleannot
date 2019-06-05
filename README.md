@@ -16,37 +16,32 @@ binary data annotation for static typing
 
 ```python
 import unittest
-import json
 import struct
 from tupleannot import *
 
 
-class TestSample(unittest.TestCase):
+# type definition
+class Vec3(Base):
+    x: Float
+    y: Float
+    z: Float
+
+
+class SampleTest(unittest.TestCase):
     def test_sample(self):
         # binary data
-        data = struct.pack('fff', 1, 2, 3)
-
-        # type definition
-        vec3 = Tuple('Vec3', [
-            Float('x'),
-            Float('y'),
-            Float('z'),
-        ])
+        data = struct.pack('ffffffd', 1, 2, 3, 4, 5, 6, 7)
 
         # parse / get value
-        remain = vec3.parse(data) # consume bytes
-        self.assertEquals(1, vec3['x'])
-        self.assertEquals(2, vec3['y'])
-        self.assertEquals(3, vec3['z'])
+        vec3, remain = Vec3[2].parse(data) # consume bytes
+        self.assertEqual(1, vec3[0]['x'])
+        self.assertEqual(2, vec3[0]['y'])
+        self.assertEqual(3, vec3[0]['z'])
+        self.assertEqual(4, vec3[1]['x'])
+        self.assertEqual(5, vec3[1]['y'])
+        self.assertEqual(6, vec3[1]['z'])
 
-        # serialize
-        self.assertEquals(data, vec3.to_bytes())
-
-        # to json
-        self.assertEquals('{"x":1,"y":2,"z":3}', vec3.to_json())
-
-        # from json
-        dict_value = json.loads(json_str)
-        vec3.from_dict(**dict_value)
-        self.assertEquals(data, vec3.to_bytes())
+        d, remain = Double.parse(remain)
+        self.assertEquals(bytes(), remain)
+        self.assertEquals(7, d.value())
 ```
