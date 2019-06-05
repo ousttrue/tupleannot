@@ -4,7 +4,7 @@ from typing import NamedTuple, Any, Tuple
 
 
 class ParentWithIndex(NamedTuple):
-    parent: Any
+    value: Any
     index: int
 
 
@@ -13,48 +13,86 @@ class MetaDefinition(type):
     def __prepare__(metacls, name, bases, **kwds):
         return collections.OrderedDict()
 
-    def __getitem__(self, length: int):
+    def __getitem__(cls, length: int):
         '''
         create Array class by []. ex: UInt32[4]
 
         ToDo: negative length(only Tuple member)
         '''
 
-        def parse_fixed_array(cls, src: bytes, parent: ParentWithIndex) -> Tuple[Base, bytes]:
-            s = cls.__element_size__ * cls.__length__
-            value = src[0:s]
-            remain = src[s:]
-            return cls(value, parent), remain
+        if length < 0:
 
-        class Array(self):
-            __element_size__ = self.__element_size__
-            __length__ = length
+            class VariableArray(cls):
+                __element_size__ = cls.__element_size__
+                __offset__ = length
 
-            def __init__(self, segment: bytes,
-                         parent: ParentWithIndex) -> None:
-                super().__init__(segment, parent)
-                self.reference = None
+                def __init__(self, segment: bytes, parent: ParentWithIndex,
+                             length: int) -> None:
+                    super().__init__(segment, parent)
+                    self.length = length
 
-            def __getitem__(self, i: int) -> self:
-                size = self.__class__.__element_size__
-                cls = self.__class__.__bases__[0]
-                begin = size * i
-                end = begin + size
-                return cls.parse(self.segment[begin:end], ParentWithIndex(self, i))[0]
+                def __getitem__(self, i: int) -> cls:
+                    size = self.__class__.__element_size__
+                    cls = self.__class__.__bases__[0]
+                    begin = size * i
+                    end = begin + size
+                    return cls.parse(self.segment[begin:end],
+                                     ParentWithIndex(self, i))[0]
 
-            def value(self):
-                return [self[i] for i in range(0, self.__class__.__length__)]
+                def value(self):
+                    return [self[i].value() for i in range(0, self.length)]
 
-            @classmethod
-            def parse(cls, src: bytes, parent=None) -> Tuple[Base, bytes]:
-                return parse_fixed_array(cls, src, parent)
+                @classmethod
+                def parse(cls, src: bytes, parent=None) -> Tuple[Base, bytes]:
+                    index = parent.index + cls.__offset__
+                    length = parent.value[index]
+                    s = cls.__element_size__ * length
+                    value = src[0:s]
+                    remain = src[s:]
+                    return cls(value, parent, length), remain
 
-        return Array
+            return VariableArray
+
+        else:
+
+            class FixedArray(cls):
+                __element_size__ = cls.__element_size__
+                __length__ = length
+
+                def __init__(self, segment: bytes,
+                             parent: ParentWithIndex) -> None:
+                    super().__init__(segment, parent)
+                    self.reference = None
+
+                def __getitem__(self, i: int) -> cls:
+                    size = self.__class__.__element_size__
+                    cls = self.__class__.__bases__[0]
+                    begin = size * i
+                    end = begin + size
+                    return cls.parse(self.segment[begin:end],
+                                     ParentWithIndex(self, i))[0]
+
+                def value(self):
+                    return [
+                        self[i].value() for i in range(0, self.__class__.__length__)
+                    ]
+
+                @classmethod
+                def parse(cls, src: bytes, parent=None) -> Tuple[Base, bytes]:
+                    s = cls.__element_size__ * cls.__length__
+                    value = src[0:s]
+                    remain = src[s:]
+                    return cls(value, parent), remain
+
+            return FixedArray
 
 
 class Base(metaclass=MetaDefinition):
     def __init__(self, segment: bytes, parent: ParentWithIndex) -> None:
         self.segment = segment
+        if parent:
+            if not isinstance(parent, ParentWithIndex):
+                raise Exception('invalid parent')
         self.parent = parent
 
 

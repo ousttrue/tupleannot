@@ -34,9 +34,10 @@ class MetaTuple(MetaDefinition):
                         if k == key:
                             return i
 
-                def __getitem__(self, key: str):
-                    index = self.index_from_key(key)
-                    return self.values[index].value()
+                def __getitem__(self, key: Any):
+                    if isinstance(key, str):
+                        key = self.index_from_key(key)
+                    return self.values[key].value()
 
                 def value(self):
                     return {
@@ -54,9 +55,11 @@ class MetaTuple(MetaDefinition):
                     size = 0
                     instance = cls(data[0:size], parent)
                     for i, (k, v) in enumerate(annotations.items()):
-                        parsed, src = v.parse(src, ParentWithIndex(instance, i))
+                        parsed, src = v.parse(src,
+                                              ParentWithIndex(instance, i))
                         size += len(src)
                         instance.values.append(parsed)
+                    instance.segment = data[0:size]
                     return instance, src
 
             return _Tuple
@@ -69,7 +72,7 @@ class TypedTuple(metaclass=MetaTuple):
 
 
 def main():
-    data = struct.pack('6I', 1, 2, 3, 4, 5, 6)
+    data = struct.pack('<6I', 1, 2, 3, 4, 5, 6)
     parsed, remain = UInt32.parse(data)
     print(f'UInt32: {parsed.value()}')
 
@@ -88,14 +91,16 @@ def main():
     parsed, remain = Vec3[2].parse(data)
     print(f'parsed[0]["x"]: {parsed[0]["x"]}')
 
-    # data = struct.pack('B2I', 2, 1, 2)
-    # class Val(Base):
-    #     n: UInt8
-    #     values: UInt32[-1]
+    data = struct.pack('<B2I', 2, 1, 2)
+    print(len(data))
 
-    # parsed, remain = Val.parse(data)
+    class Val(TypedTuple):
+        n: UInt8
+        values: UInt32[-1]
 
-    # parsed, remain = UInt32.parse(data)
+    parsed, remain = Val.parse(data)
+
+    print(f'parsed: {parsed.value()}')
 
 
 if __name__ == '__main__':

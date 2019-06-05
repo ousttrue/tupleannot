@@ -4,7 +4,7 @@ from tupleannot import *
 
 
 # type definition
-class Vec3(Base):
+class Vec3(TypedTuple):
     x: Float
     y: Float
     z: Float
@@ -13,7 +13,7 @@ class Vec3(Base):
 class SampleTest(unittest.TestCase):
     def test_sample(self):
         # binary data
-        data = struct.pack('ffffffd', 1, 2, 3, 4, 5, 6, 7)
+        data = struct.pack('<ffffffd', 1, 2, 3, 4, 5, 6, 7)
 
         # parse / get value
         vec3, remain = Vec3[2].parse(data) # consume bytes

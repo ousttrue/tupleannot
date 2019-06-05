@@ -4,7 +4,7 @@ from tupleannot import *
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-class BMP(Base):
+class BMP(TypedTuple):
     bfType: UInt16
     bfSize: UInt32
     bfReserved1: UInt16
