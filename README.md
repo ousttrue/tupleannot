@@ -28,7 +28,7 @@ from tupleannot import *
 
 
 # type definition
-class Vec3(Base):
+class Vec3(TypedTuple):
     x: Float
     y: Float
     z: Float
