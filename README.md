@@ -15,10 +15,12 @@ binary data serializer for static typing
 
 ```python
 # binary data
+import struct
 data = struct.pack('fff', [1, 2, 3])
 
 # type definition
-vec3 = Tuple('Vec3', 1, False, [
+from tupleannot import *
+vec3 = Tuple('Vec3', [
     Float('x'),
     Float('y'),
     Float('z'),

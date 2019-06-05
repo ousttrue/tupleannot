@@ -1,8 +1,14 @@
 import struct
 from abc import ABCMeta, abstractmethod
+from enum import Enum
 from typing import Any, List
 
 VERSION = [0, 0, 1]
+
+
+class ElementType:
+    Fixed = 0
+    Variable = 0
 
 
 class Parser(metaclass=ABCMeta):
@@ -10,7 +16,8 @@ class Parser(metaclass=ABCMeta):
     ElementSize x ElementCount
     '''
 
-    def __init__(self, name: str, element_fixed_count: int, shrink) -> None:
+    def __init__(self, name: str, element_fixed_count: int,
+                 element_type: ElementType) -> None:
         '''
         Parameters
         ----------
@@ -21,8 +28,8 @@ class Parser(metaclass=ABCMeta):
             if >= 1: value count. value is always array
             if < 0: index offset for value count sotore
         
-        shrink: bool, defalt False
-            if True: value in this array has variable length size
+        element_type: ArrayElement, default Fixed
+            if Variable: value in this array has variable length size
         '''
         self.name = name
         self.element_count_reference = None
@@ -35,7 +42,7 @@ class Parser(metaclass=ABCMeta):
             # fixed array
             self.element_fixed_count = element_fixed_count
         self.segment = bytes()
-        self.shrink = shrink
+        self.element_type = element_type
 
     def element_count(self) -> int:
         '''
@@ -60,7 +67,7 @@ class Parser(metaclass=ABCMeta):
         element_count = self.element_count()
         if element_count == 1:
             return self.parse_element(src)
-        elif self.shrink:
+        elif self.element_type == ElementType.Variable:
             for _ in range(element_count):
                 src = self.parse_element(src)
             return src
@@ -74,7 +81,7 @@ class Parser(metaclass=ABCMeta):
         if element_count == 1:
             # single value
             return self.element_value()
-        elif self.shrink:
+        elif self.element_type == ElementType.Variable:
             # todo
             return self.element_value()
         else:
@@ -95,6 +102,10 @@ class Parser(metaclass=ABCMeta):
 
 
 class Primitive(Parser):
+    '''
+    https://docs.python.org/3/library/struct.html
+    '''
+
     def __init__(self, name, element_count, fmt, element_size):
         super().__init__(name, element_count, False)
         self.fmt = fmt
@@ -109,6 +120,26 @@ class Primitive(Parser):
 
     def element_value(self) -> Any:
         return struct.unpack(self.fmt, self.segment)[0]
+
+
+class Int8(Primitive):
+    def __init__(self, name, element_count=1) -> None:
+        super().__init__(name, element_count, 'b', 1)
+
+
+class Int16(Primitive):
+    def __init__(self, name, element_count=1) -> None:
+        super().__init__(name, element_count, 'h', 2)
+
+
+class Int32(Primitive):
+    def __init__(self, name, element_count=1) -> None:
+        super().__init__(name, element_count, 'i', 4)
+
+
+class Int64(Primitive):
+    def __init__(self, name, element_count=1) -> None:
+        super().__init__(name, element_count, 'q', 8)
 
 
 class UInt8(Primitive):
@@ -126,14 +157,24 @@ class UInt32(Primitive):
         super().__init__(name, element_count, 'I', 4)
 
 
+class UInt64(Primitive):
+    def __init__(self, name, element_count=1) -> None:
+        super().__init__(name, element_count, 'Q', 8)
+
+
 class Float(Primitive):
     def __init__(self, name, element_count=1) -> None:
         super().__init__(name, element_count, 'f', 4)
 
 
+class Double(Primitive):
+    def __init__(self, name, element_count=1) -> None:
+        super().__init__(name, element_count, 'd', 8)
+
+
 class String(UInt8):
     def __init__(self, name: str, element_fixed_count: int,
-                 encoding='ascii') -> None:
+                 encoding='utf-8') -> None:
         super().__init__(name, element_fixed_count)
         self.encoding = encoding
 
@@ -156,8 +197,8 @@ class Tuple(Parser):
                  name: str,
                  parsers: List[Parser],
                  element_fixed_count=1,
-                 shrink=False) -> None:
-        super().__init__(name, element_fixed_count, shrink)
+                 element_type=ElementType.Fixed) -> None:
+        super().__init__(name, element_fixed_count, element_type)
         self.parsers = parsers
         for i, p in enumerate(self.parsers):
             if p.element_fixed_count < 0:
@@ -169,7 +210,6 @@ class Tuple(Parser):
             return parser
         else:
             return parser.value()
-
 
     def __str__(self) -> None:
         if self.element_count() == 1:
