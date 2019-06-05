@@ -4,7 +4,7 @@ from tupleannot import *
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-bmp = TupleParser('bmp', 1, False, [
+bmp = Tuple('bmp', [
     UInt16('bfType'),
     UInt32('bfSize'),
     UInt16('bfReserved1'),

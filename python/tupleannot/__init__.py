@@ -151,14 +151,25 @@ class String(UInt8):
             return ''
 
 
-class TupleParser(Parser):
-    def __init__(self, name: str, element_fixed_count: int, shrink: bool,
-                 parsers: List[Parser]) -> None:
+class Tuple(Parser):
+    def __init__(self,
+                 name: str,
+                 parsers: List[Parser],
+                 element_fixed_count=1,
+                 shrink=False) -> None:
         super().__init__(name, element_fixed_count, shrink)
         self.parsers = parsers
         for i, p in enumerate(self.parsers):
             if p.element_fixed_count < 0:
                 p.element_count_reference = parsers[i + p.element_fixed_count]
+
+    def __getitem__(self, key: str):
+        parser = next(x for x in self.parsers if x.name == key)
+        if isinstance(parser, Tuple):
+            return parser
+        else:
+            return parser.value()
+
 
     def __str__(self) -> None:
         if self.element_count() == 1:
