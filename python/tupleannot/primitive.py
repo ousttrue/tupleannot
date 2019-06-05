@@ -40,7 +40,7 @@ class MetaDefinition(type):
                 cls = self.__class__.__bases__[0]
                 begin = size * i
                 end = begin + size
-                return cls(self.segment[begin:end], ParentWithIndex(self, i))
+                return cls.parse(self.segment[begin:end], ParentWithIndex(self, i))[0]
 
             def value(self):
                 return [self[i] for i in range(0, self.__class__.__length__)]

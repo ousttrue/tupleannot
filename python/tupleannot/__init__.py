@@ -1,6 +1,6 @@
 import struct
 import collections
-import typing
+from typing import List, Tuple
 try:
     from .primitive import *
 except ImportError as ex:
@@ -9,7 +9,7 @@ except ImportError as ex:
 VERSION = [0, 1, 0]
 
 
-class _TupleMeta(MetaDefinition):
+class MetaTuple(MetaDefinition):
     def __new__(metacls, name, bases, namespace, **kwds):
         annotations = namespace.get('__annotations__')
         if annotations:
@@ -19,40 +19,28 @@ class _TupleMeta(MetaDefinition):
                 element_size += v.__element_size__
 
             # Create Tuple
-            class _Tuple(metaclass=MetaDefinition):
+            class _Tuple(Base, metaclass=MetaDefinition):
                 __element_size__ = element_size
                 __tuple_items__ = annotations
 
-                def __init__(self, segment: bytes, parent) -> None:
-                    self.segment = segment
-                    self.parent = parent
-                    self.values = []
+                def __init__(self, segment: bytes,
+                             parent: ParentWithIndex) -> None:
+                    super().__init__(segment, parent)
+                    self.values: List[Base] = []
+
+                def index_from_key(self, key: str):
+                    for i, (k, v) in enumerate(
+                            self.__class__.__tuple_items__.items()):
+                        if k == key:
+                            return i
 
                 def __getitem__(self, key: str):
-                    self._parse_values()
-                    for x, (k,
-                            v) in zip(self.values,
-                                      self.__class__.__tuple_items__.items()):
-                        if k == key:
-                            return x
-
-                def _parse_values(self):
-                    if self.values:
-                        return
-                    it = iter(self.__class__.__tuple_items__.items())
-                    src = self.segment
-                    while True:
-                        try:
-                            _, v = next(it)
-                            value, src = v.parse(src)
-                            self.values.append(value.value())
-                        except StopIteration:
-                            break
+                    index = self.index_from_key(key)
+                    return self.values[index].value()
 
                 def value(self):
-                    self._parse_values()
                     return {
-                        k: x
+                        k: x.value()
                         for x, (
                             k,
                             v) in zip(self.values,
@@ -61,25 +49,22 @@ class _TupleMeta(MetaDefinition):
 
                 @classmethod
                 def parse(cls, data: bytes,
-                          parent=None) -> typing.Tuple[bytes, bytes]:
-                    it = iter(annotations.items())
+                          parent=None) -> Tuple[bytes, bytes]:
                     src = data
                     size = 0
-                    while True:
-                        try:
-                            _, annotation = next(it)
-                            parsed, src = annotation.parse(src)
-                            size += len(src)
-                        except StopIteration:
-                            break
-                    return cls(data[0:size], parent), src
+                    instance = cls(data[0:size], parent)
+                    for i, (k, v) in enumerate(annotations.items()):
+                        parsed, src = v.parse(src, ParentWithIndex(instance, i))
+                        size += len(src)
+                        instance.values.append(parsed)
+                    return instance, src
 
             return _Tuple
         else:
             return type.__new__(metacls, name, bases, dict(namespace))
 
 
-class TypedTuple(metaclass=_TupleMeta):
+class TypedTuple(metaclass=MetaTuple):
     pass
 
 
