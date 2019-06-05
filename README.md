@@ -9,8 +9,15 @@ binary data annotation for static typing
 * All value is typed array that has one element or more
 * Collection
   * Typed Array(fixed length elements)
-  * Typed Array(variable length elements)
+  * Typed Array(variable length elements. array elment has variable size tuple)
   * Tuple
+
+```python
+# variable size Tuple
+class VariableSize:
+    count: UInt32
+    values: Float[-1] # negative size reference sibling value
+```
 
 ## Usage
 

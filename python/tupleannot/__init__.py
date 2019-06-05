@@ -6,72 +6,6 @@ VERSION = [0, 1, 0]
 
 
 class _MetaDefinition(type):
-    def __new__(metacls, name, bases, namespace, **kwds):
-        annotations = namespace.get('__annotations__')
-        if annotations:
-            #print(f'tuple: {name}')
-            element_size = 0
-            for k, v in annotations.items():
-                element_size += v.__element_size__
-
-            # Create Tuple
-            class TypedTuple(metaclass=_MetaDefinition):
-                __element_size__ = element_size
-                __tuple_items__ = annotations
-
-                def __init__(self, segment: bytes) -> None:
-                    self.segment = segment
-                    self.values = []
-
-                def __getitem__(self, key: str):
-                    self._parse_values()
-                    for x, (k,
-                            v) in zip(self.values,
-                                      self.__class__.__tuple_items__.items()):
-                        if k == key:
-                            return x
-
-                def _parse_values(self):
-                    if self.values:
-                        return
-                    it = iter(self.__class__.__tuple_items__.items())
-                    src = self.segment
-                    while True:
-                        try:
-                            _, v = next(it)
-                            value, src = v.parse(src)
-                            self.values.append(value.value())
-                        except StopIteration:
-                            break
-
-                def value(self):
-                    self._parse_values()
-                    return {
-                        k: x
-                        for x, (
-                            k,
-                            v) in zip(self.values,
-                                      self.__class__.__tuple_items__.items())
-                    }
-
-                @classmethod
-                def parse(cls, data: bytes) -> typing.Tuple[bytes, bytes]:
-                    it = iter(annotations.items())
-                    src = data
-                    size = 0
-                    while True:
-                        try:
-                            _, annotation = next(it)
-                            parsed, src = annotation.parse(src)
-                            size += len(src)
-                        except StopIteration:
-                            break
-                    return cls(data[0:size]), src
-
-            return TypedTuple
-        else:
-            return type.__new__(metacls, name, bases, dict(namespace))
-
     @classmethod
     def __prepare__(metacls, name, bases, **kwds):
         return collections.OrderedDict()
@@ -79,6 +13,8 @@ class _MetaDefinition(type):
     def __getitem__(self, length: int):
         '''
         create Array class by []. ex: UInt32[4]
+
+        ToDo: negative length
         '''
 
         class Array(self):
@@ -87,13 +23,14 @@ class _MetaDefinition(type):
 
             def __init__(self, segment: bytes) -> None:
                 super().__init__(segment)
+                self.reference = None
 
             def __getitem__(self, i: int) -> self:
                 size = self.__class__.__element_size__
-                pos = size * i
                 cls = self.__class__.__bases__[0]
-                return cls(self.segment[pos:pos +
-                                        self.__class__.__element_size__])
+                begin = size * i
+                end = begin + size
+                return cls(self.segment[begin:end])
 
             def value(self):
                 size = self.__class__.__element_size__
@@ -113,16 +50,11 @@ class _MetaDefinition(type):
 
 
 class Base(metaclass=_MetaDefinition):
-    __length__ = 0
-
     def __init__(self, segment: bytes) -> None:
         self.segment = segment
 
     def value(self):
-        s = self.__class__.__length__
-        if s == 0:
-            s = 1
-        return struct.unpack(f'{s}{self.__class__.__fmt__}', self.segment)[0]
+        return struct.unpack(f'{self.__class__.__fmt__}', self.segment)[0]
 
     @classmethod
     def parse(cls, src: bytes) -> typing.Tuple[bytes, bytes]:
@@ -182,6 +114,77 @@ class Double(Base):
     __element_size__ = 8
 
 
+class _TupleMeta(_MetaDefinition):
+    def __new__(metacls, name, bases, namespace, **kwds):
+        annotations = namespace.get('__annotations__')
+        if annotations:
+            #print(f'tuple: {name}')
+            element_size = 0
+            for k, v in annotations.items():
+                element_size += v.__element_size__
+
+            # Create Tuple
+            class _Tuple(metaclass=_MetaDefinition):
+                __element_size__ = element_size
+                __tuple_items__ = annotations
+
+                def __init__(self, segment: bytes) -> None:
+                    self.segment = segment
+                    self.values = []
+
+                def __getitem__(self, key: str):
+                    self._parse_values()
+                    for x, (k,
+                            v) in zip(self.values,
+                                      self.__class__.__tuple_items__.items()):
+                        if k == key:
+                            return x
+
+                def _parse_values(self):
+                    if self.values:
+                        return
+                    it = iter(self.__class__.__tuple_items__.items())
+                    src = self.segment
+                    while True:
+                        try:
+                            _, v = next(it)
+                            value, src = v.parse(src)
+                            self.values.append(value.value())
+                        except StopIteration:
+                            break
+
+                def value(self):
+                    self._parse_values()
+                    return {
+                        k: x
+                        for x, (
+                            k,
+                            v) in zip(self.values,
+                                      self.__class__.__tuple_items__.items())
+                    }
+
+                @classmethod
+                def parse(cls, data: bytes) -> typing.Tuple[bytes, bytes]:
+                    it = iter(annotations.items())
+                    src = data
+                    size = 0
+                    while True:
+                        try:
+                            _, annotation = next(it)
+                            parsed, src = annotation.parse(src)
+                            size += len(src)
+                        except StopIteration:
+                            break
+                    return cls(data[0:size]), src
+
+            return _Tuple
+        else:
+            return type.__new__(metacls, name, bases, dict(namespace))
+
+
+class TypedTuple(metaclass=_TupleMeta): pass
+
+
 def main():
     data = struct.pack('6I', 1, 2, 3, 4, 5, 6)
     parsed, remain = UInt32.parse(data)
@@ -190,7 +193,7 @@ def main():
     parsed, remain = UInt32[2].parse(data)
     print(f'Uint32[2]: {parsed.value()}')
 
-    class Vec3(Base):
+    class Vec3(TypedTuple):
         x: UInt32
         y: UInt32
         z: UInt32
@@ -201,6 +204,15 @@ def main():
 
     parsed, remain = Vec3[2].parse(data)
     print(f'parsed[0]["x"]: {parsed[0]["x"]}')
+
+    # data = struct.pack('B2I', 2, 1, 2)
+    # class Val(Base):
+    #     n: UInt8
+    #     values: UInt32[-1]
+
+    # parsed, remain = Val.parse(data)
+
+    # parsed, remain = UInt32.parse(data)
 
 
 if __name__ == '__main__':
