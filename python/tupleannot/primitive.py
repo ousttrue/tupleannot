@@ -18,18 +18,23 @@ class MetaDefinition(type):
         create Array class by []. ex: UInt32[4]
         '''
 
+        plus = 0
+        if isinstance(length_or_offset, tuple):
+            plus = length_or_offset[1]
+            length_or_offset = length_or_offset[0]
+
         if isinstance(length_or_offset, str):
             key = length_or_offset
 
             def get_length(parent):
-                return parent.value[key].value()
+                return parent.value[key].value() + plus
 
         elif length_or_offset < 0:
             # lazy length. determine array length by other value
             offset = length_or_offset
 
             def get_length(parent):
-                return parent.value[parent.index + offset].value()
+                return parent.value[parent.index + offset].value() + plus
         else:
             length = length_or_offset
 

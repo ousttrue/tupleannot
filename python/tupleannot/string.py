@@ -16,12 +16,16 @@ class MetaString(type):
         ex: String[20, 'cp932']
         '''
 
+        plus = 0
         if isinstance(length_or_offset, tuple):
             encoding = length_or_offset[1]
             length_or_offset = length_or_offset[0]
+            if isinstance(length_or_offset, tuple):
+                plus = length_or_offset[1]
+                length_or_offset = length_or_offset[0]
+
         else:
             encoding = 'utf-8' # default
-
 
 
         if isinstance(length_or_offset, str):
@@ -29,13 +33,13 @@ class MetaString(type):
             key = length_or_offset
 
             def get_length(parent):
-                return parent.value[key].value()
+                return parent.value[key].value() + plus
 
         elif length_or_offset < 0:
             offset = length_or_offset
 
             def get_length(parent):
-                return parent.value[parent.index + offset].value()
+                return parent.value[parent.index + offset].value() + plus
 
         else:
             length = length_or_offset
@@ -45,13 +49,7 @@ class MetaString(type):
 
         class Array(UInt8):
             __get_length__ = get_length
-
-            def __init__(self,
-                         segment: bytes,
-                         parent: ParentWithIndex,
-                         encoding) -> None:
-                super().__init__(segment, parent)
-                self.encoding=encoding
+            __encoding__ = encoding
 
             def __str__(self) -> str:
                 return f'"{self.value()}"'
@@ -61,7 +59,7 @@ class MetaString(type):
                     end = self.segment.index(0)
                 except ValueError:
                     end = len(self.segment)
-                return self.segment[:end].decode(self.encoding)
+                return self.segment[:end].decode(self.__class__.__encoding__)
 
             @classmethod
             def value_size(cls):
@@ -79,7 +77,7 @@ class MetaString(type):
                 s = cls.__element_size__ * length
                 value = data[0:s]
                 remain = data[s:]
-                return cls(value, parent, encoding), remain
+                return cls(value, parent), remain
 
         return Array
 
