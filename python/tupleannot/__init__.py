@@ -49,6 +49,16 @@ class MetaTuple(MetaDefinition):
                     }
 
                 @classmethod
+                def has_lazy_array(cls):
+                    for k, v in cls.__tuple_items__.items():
+                        if v.is_lazy_array():
+                            return True
+                        if v.is_tuple():
+                            if v.has_lazy_array():
+                                return True
+                    return False
+
+                @classmethod
                 def parse(cls, data: bytes,
                           parent=None) -> Tuple[bytes, bytes]:
                     src = data
@@ -57,7 +67,7 @@ class MetaTuple(MetaDefinition):
                     for i, (k, v) in enumerate(annotations.items()):
                         parsed, src = v.parse(src,
                                               ParentWithIndex(instance, i))
-                        size += len(src)
+                        size += len(parsed.segment)
                         instance.values.append(parsed)
                     instance.segment = data[0:size]
                     return instance, src
@@ -71,13 +81,13 @@ class TypedTuple(metaclass=MetaTuple):
     pass
 
 
-def main():
+def tuple_sample():
     data = struct.pack('<6I', 1, 2, 3, 4, 5, 6)
     parsed, remain = UInt32.parse(data)
     print(f'UInt32: {parsed.value()}')
 
     parsed, remain = UInt32[2].parse(data)
-    print(f'Uint32[2]: {parsed.value()}')
+    print(f'UInt32[2]: {parsed.value()}')
 
     class Vec3(TypedTuple):
         x: UInt32
@@ -91,17 +101,28 @@ def main():
     parsed, remain = Vec3[2].parse(data)
     print(f'parsed[0]["x"]: {parsed[0]["x"]}')
 
-    data = struct.pack('<B2I', 2, 1, 2)
-    print(len(data))
 
+def lazy_length_sample():
     class Val(TypedTuple):
         n: UInt8
         values: UInt32[-1]
-
+    data = struct.pack('<B2I', 2, 1, 2)
+    print(len(data))
     parsed, remain = Val.parse(data)
+    print(f'parsed: {parsed.value()}')
 
+    class VariableLengthArray(TypedTuple):
+        tuple_items: Val[2] # item length is variable
+    data = struct.pack('<B2IB3I', 2, 1, 2, 3, 4, 5, 6)
+    parsed, remain = VariableLengthArray.parse(data)
     print(f'parsed: {parsed.value()}')
 
 
+def variable_element_array_sample():
+    pass
+
+
 if __name__ == '__main__':
-    main()
+    tuple_sample()
+    lazy_length_sample()
+    variable_element_array_sample()

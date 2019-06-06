@@ -19,12 +19,14 @@ class MetaDefinition(type):
         '''
 
         if length_or_offset < 0:
-            # previous value as array length
+            # lazy length. determine array length by other value
             offset = length_or_offset
+
             def get_length(parent):
                 return parent.value[parent.index + offset]
         else:
             length = length_or_offset
+
             def get_length(_):
                 return length
 
@@ -32,26 +34,51 @@ class MetaDefinition(type):
             __element_size__ = cls.__element_size__
             __get_length__ = get_length
 
-            def __init__(self, segment: bytes, parent: ParentWithIndex) -> None:
+            def __init__(self, segment: bytes,
+                         parent: ParentWithIndex, values = None) -> None:
                 super().__init__(segment, parent)
+                self.values = values
 
             def __getitem__(self, i: int) -> cls:
-                size = self.__class__.__element_size__
-                cls = self.__class__.__bases__[0]
-                begin = size * i
-                end = begin + size
-                return cls.parse(self.segment[begin:end],
-                                    ParentWithIndex(self, i))[0]
+                if self.values:
+                    # variable element length. already parsed
+                    return self.values[i]
+                else:
+                    size = self.__class__.__element_size__
+                    base_cls = self.__class__.__bases__[0]
+                    begin = size * i
+                    end = begin + size
+                    return base_cls.parse(self.segment[begin:end],
+                                        ParentWithIndex(self, i))[0]
 
             def value(self):
-                return [self[i].value() for i in range(0, self.__class__.__get_length__(self.parent))]
+                return [
+                    self[i].value() for i in range(
+                        0, self.__class__.__get_length__(self.parent))
+                ]
 
             @classmethod
-            def parse(cls, src: bytes, parent=None) -> Tuple[Base, bytes]:
-                s = cls.__element_size__ * cls.__get_length__(parent)
-                value = src[0:s]
-                remain = src[s:]
-                return cls(value, parent), remain
+            def is_lazy_array(cls):
+                return length_or_offset < 0
+
+            @classmethod
+            def parse(cls, data: bytes, parent=None) -> Tuple[Base, bytes]:
+                length = cls.__get_length__(parent)
+                if cls.has_lazy_array():
+                    values = []
+                    size = 0
+                    src = data
+                    base_cls = cls.__bases__[0]
+                    for _ in range(length):
+                        value, src = base_cls.parse(src)
+                        size += len(value.segment)
+                        values.append(value)
+                    return cls(data[0:size], parent, values), src
+                else:
+                    s = cls.__element_size__ * length
+                    value = data[0:s]
+                    remain = data[s:]
+                    return cls(value, parent), remain
 
         return Array
 
@@ -63,6 +90,18 @@ class Base(metaclass=MetaDefinition):
             if not isinstance(parent, ParentWithIndex):
                 raise Exception('invalid parent')
         self.parent = parent
+
+    @classmethod
+    def has_lazy_array(cls):
+        return False
+
+    @classmethod
+    def is_lazy_array(cls):
+        return False
+
+    @classmethod
+    def is_tuple(cls):
+        return False
 
 
 class Primitive(Base):
