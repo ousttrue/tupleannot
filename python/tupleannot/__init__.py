@@ -87,6 +87,7 @@ class MetaTuple(MetaDefinition):
                     instance.segment = data[0:size]
                     return instance, src
 
+            _Tuple.__name__ = name
             return _Tuple
         else:
             return type.__new__(metacls, name, bases, dict(namespace))

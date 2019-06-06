@@ -22,12 +22,21 @@ class MetaString(type):
         else:
             encoding = 'utf-8' # default
 
-        if length_or_offset < 0:
+
+
+        if isinstance(length_or_offset, str):
             # lazy length. determine array length by other value
+            key = length_or_offset
+
+            def get_length(parent):
+                return parent.value[key].value()
+
+        elif length_or_offset < 0:
             offset = length_or_offset
 
             def get_length(parent):
                 return parent.value[parent.index + offset].value()
+
         else:
             length = length_or_offset
 
@@ -45,7 +54,7 @@ class MetaString(type):
                 self.encoding=encoding
 
             def __str__(self) -> str:
-                return self.value()
+                return f'"{self.value()}"'
 
             def value(self):
                 try:
@@ -53,6 +62,12 @@ class MetaString(type):
                 except ValueError:
                     end = len(self.segment)
                 return self.segment[:end].decode(self.encoding)
+
+            @classmethod
+            def value_size(cls):
+                if cls.is_lazy_array():
+                    raise Exception('lazy array not has value_size')
+                return length_or_offset
 
             @classmethod
             def is_lazy_array(cls):

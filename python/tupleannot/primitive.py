@@ -18,7 +18,13 @@ class MetaDefinition(type):
         create Array class by []. ex: UInt32[4]
         '''
 
-        if length_or_offset < 0:
+        if isinstance(length_or_offset, str):
+            key = length_or_offset
+
+            def get_length(parent):
+                return parent.value[key].value()
+
+        elif length_or_offset < 0:
             # lazy length. determine array length by other value
             offset = length_or_offset
 
@@ -41,7 +47,9 @@ class MetaDefinition(type):
                 self.values = values
 
             def __str__(self) -> str:
-                return f'[{", ".join(str(x) for x in self.value())}]'
+                #return f'[{", ".join(str(x) for x in self.value())}]'
+                length = self.__class__.__get_length__(self.parent)
+                return f'{base_cls.__name__}[{length}]'
 
             def __getitem__(self, i: int) -> base_cls:
                 if self.values:
