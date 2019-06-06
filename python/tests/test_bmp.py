@@ -5,23 +5,23 @@ from tupleannot import *
 HERE = pathlib.Path(__file__).resolve().parent
 
 class BMP(TypedTuple):
-    bfType: UInt16
-    bfSize: UInt32
-    bfReserved1: UInt16
-    bfReserved2: UInt16
-    bfOffBits: UInt32
-    biSize: UInt32
-    biWidth: UInt32
-    biHeight: UInt32
-    biPlanes: UInt16
-    biBitCount: UInt16
-    biCompression: UInt32
-    biSizeImage	: UInt32
-    biXPixPerMeter: UInt32
-    biYPixPerMeter: UInt32
-    biClrUsed: UInt32
-    biCirImportant: UInt32
-    pixels: UInt8[-5]
+    bfType: UInt16LE
+    bfSize: UInt32LE
+    bfReserved1: UInt16LE
+    bfReserved2: UInt16LE
+    bfOffBits: UInt32LE
+    biSize: UInt32LE
+    biWidth: UInt32LE
+    biHeight: UInt32LE
+    biPlanes: UInt16LE
+    biBitCount: UInt16LE
+    biCompression: UInt32LE
+    biSizeImage	: UInt32LE
+    biXPixPerMeter: UInt32LE
+    biYPixPerMeter: UInt32LE
+    biClrUsed: UInt32LE
+    biCirImportant: UInt32LE
+    pixels: UInt8LE[-5]
 
 
 

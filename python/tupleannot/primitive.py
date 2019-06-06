@@ -130,62 +130,62 @@ class Primitive(Base):
         return cls(value, parent), remain
 
 
-class Int8(Primitive):
-    __fmt__ = 'b'
+class Int8LE(Primitive):
+    __fmt__ = '<b'
     __element_size__ = 1
 
 
-class Int16(Primitive):
-    __fmt__ = 'h'
+class Int16LE(Primitive):
+    __fmt__ = '<h'
     __element_size__ = 2
 
 
-class Int32(Primitive):
-    __fmt__ = 'i'
+class Int32LE(Primitive):
+    __fmt__ = '<i'
     __element_size__ = 4
 
 
-class Int64(Primitive):
-    __fmt__ = 'q'
+class Int64LE(Primitive):
+    __fmt__ = '<q'
     __element_size__ = 8
 
 
-class UInt8(Primitive):
-    __fmt__ = 'B'
+class UInt8LE(Primitive):
+    __fmt__ = '<B'
     __element_size__ = 1
 
 
-class UInt16(Primitive):
-    __fmt__ = 'H'
+class UInt16LE(Primitive):
+    __fmt__ = '<H'
     __element_size__ = 2
 
 
-class UInt32(Primitive):
-    __fmt__ = 'I'
+class UInt32LE(Primitive):
+    __fmt__ = '<I'
     __element_size__ = 4
 
 
-class UInt64(Primitive):
-    __fmt__ = 'Q'
+class UInt64LE(Primitive):
+    __fmt__ = '<Q'
     __element_size__ = 8
 
 
-class Float(Primitive):
-    __fmt__ = 'f'
+class FloatLE(Primitive):
+    __fmt__ = '<f'
     __element_size__ = 4
 
 
-class Double(Primitive):
-    __fmt__ = 'd'
+class DoubleLE(Primitive):
+    __fmt__ = '<d'
     __element_size__ = 8
 
 
 def main():
     data = struct.pack('6I', 1, 2, 3, 4, 5, 6)
-    parsed, remain = UInt32.parse(data)
+    parsed, remain = UInt32LE.parse(data)
     print(f'UInt32: {parsed.value()}')
 
-    parsed, remain = UInt32[6].parse(data)
+    parsed, remain = UInt32LE[6].parse(data)
     print(f'UInt32[0]: {parsed[0].value()}')
     print(f'UInt32[5]: {parsed[5].value()}')
 

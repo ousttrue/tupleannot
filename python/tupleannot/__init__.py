@@ -86,16 +86,16 @@ class TypedTuple(metaclass=MetaTuple):
 
 def tuple_sample():
     data = struct.pack('<6I', 1, 2, 3, 4, 5, 6)
-    parsed, remain = UInt32.parse(data)
+    parsed, remain = UInt32LE.parse(data)
     print(f'UInt32: {parsed.value()}')
 
-    parsed, remain = UInt32[2].parse(data)
+    parsed, remain = UInt32LE[2].parse(data)
     print(f'UInt32[2]: {parsed}')
 
     class Vec3(TypedTuple):
-        x: UInt32
-        y: UInt32
-        z: UInt32
+        x: UInt32LE
+        y: UInt32LE
+        z: UInt32LE
 
     parsed, remain = Vec3.parse(data)
     print(f'remain: {remain}')
@@ -107,8 +107,8 @@ def tuple_sample():
 
 def lazy_length_sample():
     class Val(TypedTuple):
-        n: UInt8
-        values: UInt32[-1]
+        n: UInt8LE
+        values: UInt32LE[-1]
     data = struct.pack('<B2I', 2, 1, 2)
     print(len(data))
     parsed, remain = Val.parse(data)

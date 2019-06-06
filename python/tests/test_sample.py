@@ -5,9 +5,9 @@ from tupleannot import *
 
 # type definition
 class Vec3(TypedTuple):
-    x: Float
-    y: Float
-    z: Float
+    x: FloatLE
+    y: FloatLE
+    z: FloatLE
 
 
 class SampleTest(unittest.TestCase):
@@ -17,14 +17,14 @@ class SampleTest(unittest.TestCase):
 
         # parse / get value
         vec3, remain = Vec3[2].parse(data) # consume bytes
-        self.assertEqual(1, vec3[0]['x'])
-        self.assertEqual(2, vec3[0]['y'])
-        self.assertEqual(3, vec3[0]['z'])
-        self.assertEqual(4, vec3[1]['x'])
-        self.assertEqual(5, vec3[1]['y'])
-        self.assertEqual(6, vec3[1]['z'])
+        self.assertEqual(1, vec3[0]['x'].value())
+        self.assertEqual(2, vec3[0]['y'].value())
+        self.assertEqual(3, vec3[0]['z'].value())
+        self.assertEqual(4, vec3[1]['x'].value())
+        self.assertEqual(5, vec3[1]['y'].value())
+        self.assertEqual(6, vec3[1]['z'].value())
 
-        d, remain = Double.parse(remain)
+        d, remain = DoubleLE.parse(remain)
         self.assertEquals(bytes(), remain)
         self.assertEquals(7, d.value())
 
