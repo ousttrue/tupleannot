@@ -15,6 +15,7 @@ binary data annotation for static typing
       * fixed
       * variable(contain lazy length array)
 * Tuple
+* String
 
 ## Usage
 
@@ -23,9 +24,9 @@ binary data annotation for static typing
 ```python
 # type definition
 class Vec3(TypedTuple):
-    x: Float
-    y: Float
-    z: Float
+    x: FloatLE
+    y: FloatLE
+    z: FloatLE
 
 # binary data
 data = struct.pack('ffffffd', 1, 2, 3, 4, 5, 6, 7)
@@ -47,7 +48,7 @@ self.assertEqual(6, vec3[1]['z'])
 ```python
 class Val(TypedTuple):
     length: UInt8
-    values: UInt32[-1] # determinate array length by relative value
+    values: UInt32LE[-1] # determinate array length by relative value
 
 data = struct.pack('<B2I', 2, 1, 2)
 
@@ -63,4 +64,11 @@ class Val(TypedTuple):
 
 class VariableLengthArray(TypedTuple):
     tuple_items: Val[2] # item length is variable
+```
+
+### string
+
+```python
+data = '文字列'.encode('cp932')
+parsed, remain = String[6, 'cp932'].parse(data)
 ```

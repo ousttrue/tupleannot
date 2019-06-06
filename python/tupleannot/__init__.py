@@ -3,8 +3,10 @@ import collections
 from typing import List, Tuple
 try:
     from .primitive import *
+    from .string import *
 except ImportError as ex:
     from primitive import *
+    from string import *
 
 VERSION = [0, 1, 0]
 
@@ -107,7 +109,7 @@ def tuple_sample():
 
 def lazy_length_sample():
     class Val(TypedTuple):
-        n: UInt8LE
+        n: UInt8
         values: UInt32LE[-1]
     data = struct.pack('<B2I', 2, 1, 2)
     print(len(data))

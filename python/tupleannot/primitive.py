@@ -130,7 +130,7 @@ class Primitive(Base):
         return cls(value, parent), remain
 
 
-class Int8LE(Primitive):
+class Int8(Primitive):
     __fmt__ = '<b'
     __element_size__ = 1
 
@@ -150,7 +150,7 @@ class Int64LE(Primitive):
     __element_size__ = 8
 
 
-class UInt8LE(Primitive):
+class UInt8(Primitive):
     __fmt__ = '<B'
     __element_size__ = 1
 
@@ -179,6 +179,29 @@ class DoubleLE(Primitive):
     __fmt__ = '<d'
     __element_size__ = 8
 
+class String(Base):
+    def __init__(self, segment, parent, encoding='utf-8'):
+        super().__init__(segment, parent)
+        self.encoding=encoding
+
+    def __str__(self)->str:
+        return self.value()
+
+    def value(self):
+        try:
+            end=self.segment.index(0)
+        except ValueError: 
+            end = len(self.segment)
+        return self.segment[0:end].decode(self.encoding)
+
+    @classmethod
+    def parse(cls, src: bytes, parent=None) -> Tuple[bytes, bytes]:
+        s = cls.__element_size__
+        value = src[0:s]
+        remain = src[s:]
+        return cls(value, parent), remain
+
+
 
 def main():
     data = struct.pack('6I', 1, 2, 3, 4, 5, 6)
@@ -188,7 +211,6 @@ def main():
     parsed, remain = UInt32LE[6].parse(data)
     print(f'UInt32[0]: {parsed[0].value()}')
     print(f'UInt32[5]: {parsed[5].value()}')
-
 
 if __name__ == '__main__':
     main()
