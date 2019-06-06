@@ -6,18 +6,15 @@ binary data annotation for static typing
   * Int8, 16, 32, 64
   * UInt8, 16, 32, 64
   * Float, Double
-* All value is typed array that has one element or more
 * Collection
-  * Typed Array(fixed length elements)
-  * Typed Array(variable length elements. array elment has variable size tuple)
-  * Tuple
-
-```python
-# variable size Tuple
-class VariableSize:
-    count: UInt32
-    values: Float[-1] # negative size reference sibling value
-```
+  * Typed Array
+    * array length
+      * fixed
+      * lazy(length is stored in previous value)
+    * element length
+      * fixed
+      * variable(contain lazy length array)
+* Tuple
 
 ## Usage
 
