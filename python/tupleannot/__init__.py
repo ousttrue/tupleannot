@@ -16,13 +16,23 @@ class MetaTuple(MetaDefinition):
         annotations = namespace.get('__annotations__')
         if annotations:
             #print(f'tuple: {name}')
-            element_size = 0
-            for k, v in annotations.items():
-                element_size += v.__element_size__
+            def _has_lazy_array():
+                for k, v in annotations.items():
+                    if v.is_lazy_array():
+                        return True
+                    if v.is_tuple():
+                        if v.has_lazy_array():
+                            return True
+                return False
+
+            def _value_size():
+                element_size = 0
+                for k, v in annotations.items():
+                    element_size += v.value_size()
+                return element_size
 
             # Create Tuple
             class _Tuple(Base, metaclass=MetaDefinition):
-                __element_size__ = element_size
                 __tuple_items__ = annotations
 
                 def __init__(self, segment: bytes,
@@ -55,13 +65,13 @@ class MetaTuple(MetaDefinition):
 
                 @classmethod
                 def has_lazy_array(cls):
-                    for k, v in cls.__tuple_items__.items():
-                        if v.is_lazy_array():
-                            return True
-                        if v.is_tuple():
-                            if v.has_lazy_array():
-                                return True
-                    return False
+                    return _has_lazy_array()
+
+                @classmethod
+                def value_size(cls):
+                    if _has_lazy_array():
+                        raise Exception('not has value_size, because contain lazy array')
+                    return _value_size()
 
                 @classmethod
                 def parse(cls, data: bytes,

@@ -13,7 +13,7 @@ class MetaDefinition(type):
     def __prepare__(metacls, name, bases, **kwds):
         return collections.OrderedDict()
 
-    def __getitem__(cls, length_or_offset: int):
+    def __getitem__(base_cls, length_or_offset: int):
         '''
         create Array class by []. ex: UInt32[4]
         '''
@@ -30,8 +30,7 @@ class MetaDefinition(type):
             def get_length(_):
                 return length
 
-        class Array(cls):
-            __element_size__ = cls.__element_size__
+        class Array(base_cls):
             __get_length__ = get_length
 
             def __init__(self,
@@ -44,13 +43,13 @@ class MetaDefinition(type):
             def __str__(self) -> str:
                 return f'[{", ".join(str(x) for x in self.value())}]'
 
-            def __getitem__(self, i: int) -> cls:
+            def __getitem__(self, i: int) -> base_cls:
                 if self.values:
                     # variable element length. already parsed
                     return self.values[i]
                 else:
-                    size = self.__class__.__element_size__
                     base_cls = self.__class__.__bases__[0]
+                    size = base_cls.value_size()
                     begin = size * i
                     end = begin + size
                     return base_cls.parse(self.segment[begin:end],
@@ -67,20 +66,25 @@ class MetaDefinition(type):
                 return length_or_offset < 0
 
             @classmethod
+            def value_size(cls):
+                if cls.is_lazy_array():
+                    raise Exception('lazy array not has value_size')
+                return base_cls.value_size() * length_or_offset
+
+            @classmethod
             def parse(cls, data: bytes, parent=None) -> Tuple[Base, bytes]:
                 length = cls.__get_length__(parent)
-                if cls.has_lazy_array():
+                if base_cls.has_lazy_array():
                     values = []
                     size = 0
                     src = data
-                    base_cls = cls.__bases__[0]
                     for _ in range(length):
                         value, src = base_cls.parse(src)
                         size += len(value.segment)
                         values.append(value)
                     return cls(data[0:size], parent, values), src
                 else:
-                    s = cls.__element_size__ * length
+                    s = base_cls.value_size() * length
                     value = data[0:s]
                     remain = data[s:]
                     return cls(value, parent), remain
@@ -121,6 +125,10 @@ class Primitive(Base):
 
     def value(self):
         return struct.unpack(f'{self.__class__.__fmt__}', self.segment)[0]
+
+    @classmethod
+    def value_size(cls):
+        return cls.__element_size__
 
     @classmethod
     def parse(cls, src: bytes, parent=None) -> Tuple[bytes, bytes]:

@@ -52,7 +52,7 @@ class MetaString(type):
                     end = self.segment.index(0)
                 except ValueError:
                     end = len(self.segment)
-                return self.segment.decode(self.encoding)
+                return self.segment[:end].decode(self.encoding)
 
             @classmethod
             def is_lazy_array(cls):
