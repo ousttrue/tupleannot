@@ -28,6 +28,9 @@ class MetaTuple(MetaDefinition):
                     super().__init__(segment, parent)
                     self.values: List[Base] = []
 
+                def __str__(self)->str:
+                    return '{' + ', '.join(f'"{k}": {str(v)}' for k, v in self.value().items()) + '}'
+
                 def index_from_key(self, key: str):
                     for i, (k, v) in enumerate(
                             self.__class__.__tuple_items__.items()):
@@ -37,11 +40,11 @@ class MetaTuple(MetaDefinition):
                 def __getitem__(self, key: Any):
                     if isinstance(key, str):
                         key = self.index_from_key(key)
-                    return self.values[key].value()
+                    return self.values[key]
 
                 def value(self):
                     return {
-                        k: x.value()
+                        k: x
                         for x, (
                             k,
                             v) in zip(self.values,
@@ -87,7 +90,7 @@ def tuple_sample():
     print(f'UInt32: {parsed.value()}')
 
     parsed, remain = UInt32[2].parse(data)
-    print(f'UInt32[2]: {parsed.value()}')
+    print(f'UInt32[2]: {parsed}')
 
     class Vec3(TypedTuple):
         x: UInt32
@@ -96,7 +99,7 @@ def tuple_sample():
 
     parsed, remain = Vec3.parse(data)
     print(f'remain: {remain}')
-    print(f'vec3: {parsed.value()}')
+    print(f'vec3: {parsed}')
 
     parsed, remain = Vec3[2].parse(data)
     print(f'parsed[0]["x"]: {parsed[0]["x"]}')
@@ -109,13 +112,13 @@ def lazy_length_sample():
     data = struct.pack('<B2I', 2, 1, 2)
     print(len(data))
     parsed, remain = Val.parse(data)
-    print(f'parsed: {parsed.value()}')
+    print(f'parsed: {parsed}')
 
     class VariableLengthArray(TypedTuple):
         tuple_items: Val[2] # item length is variable
     data = struct.pack('<B2IB3I', 2, 1, 2, 3, 4, 5, 6)
     parsed, remain = VariableLengthArray.parse(data)
-    print(f'parsed: {parsed.value()}')
+    print(f'parsed: {parsed}')
 
 
 def variable_element_array_sample():

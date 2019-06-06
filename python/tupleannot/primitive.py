@@ -23,7 +23,7 @@ class MetaDefinition(type):
             offset = length_or_offset
 
             def get_length(parent):
-                return parent.value[parent.index + offset]
+                return parent.value[parent.index + offset].value()
         else:
             length = length_or_offset
 
@@ -34,10 +34,15 @@ class MetaDefinition(type):
             __element_size__ = cls.__element_size__
             __get_length__ = get_length
 
-            def __init__(self, segment: bytes,
-                         parent: ParentWithIndex, values = None) -> None:
+            def __init__(self,
+                         segment: bytes,
+                         parent: ParentWithIndex,
+                         values=None) -> None:
                 super().__init__(segment, parent)
                 self.values = values
+
+            def __str__(self) -> str:
+                return f'[{", ".join(str(x) for x in self.value())}]'
 
             def __getitem__(self, i: int) -> cls:
                 if self.values:
@@ -49,11 +54,11 @@ class MetaDefinition(type):
                     begin = size * i
                     end = begin + size
                     return base_cls.parse(self.segment[begin:end],
-                                        ParentWithIndex(self, i))[0]
+                                          ParentWithIndex(self, i))[0]
 
             def value(self):
                 return [
-                    self[i].value() for i in range(
+                    self[i] for i in range(
                         0, self.__class__.__get_length__(self.parent))
                 ]
 
@@ -110,6 +115,9 @@ class Primitive(Base):
     UInt8, 16, 32, 64
     Float, Double
     '''
+
+    def __str__(self)->str:
+        return str(self.value())
 
     def value(self):
         return struct.unpack(f'{self.__class__.__fmt__}', self.segment)[0]
