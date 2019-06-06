@@ -79,6 +79,7 @@ class MetaString(type):
                 remain = data[s:]
                 return cls(value, parent), remain
 
+        Array.__name__ = f'{encoding}#{length_or_offset}'
         return Array
 
     
